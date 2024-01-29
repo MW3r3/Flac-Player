@@ -15,6 +15,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import { createLibraryMap } from './fsUtil';
 
 class AppUpdater {
   constructor() {
@@ -131,11 +132,29 @@ app
     const appDataDirectory = app.getPath('appData');
     const appName = app.getName();
     const appDirectory = path.join(appDataDirectory, appName);
+    const libraryPathsFilePath = path.join(appDirectory, 'libraryPaths.json');
+    const libraryMapFilePath = path.join(appDirectory, 'libraryMap.json');
 
     try {
       await fs.promises.mkdir(appDirectory, { recursive: true });
+      // Check if libraryPaths.json exists
+      try {
+        await fs.promises.access(libraryPathsFilePath);
+      } catch (error) {
+        // If the file does not exist, create it with an empty array
+        await fs.promises.writeFile(libraryPathsFilePath, JSON.stringify([], null, 2));
+      }
+
+      // Check if libraryMap.json exists
+      try {
+        await fs.promises.access(libraryMapFilePath);
+      } catch (error) {
+        // If the file does not exist, create it by calling createLibraryMap
+        const libraryMap = await createLibraryMap();
+        await fs.promises.writeFile(libraryMapFilePath, JSON.stringify(libraryMap, null, 2));
+      }
     } catch (error) {
-      console.error(`Failed to create directory ${appDirectory}:`, error);
+      console.error(`Failed to create directory or file:`, error);
       // Handle error as appropriate for your application
     }
 
